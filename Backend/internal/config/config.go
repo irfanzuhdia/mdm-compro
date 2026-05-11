@@ -11,7 +11,7 @@ import (
 type Config struct {
 	AppEnv             string
 	HTTPAddr           string
-	FrontendOrigin     string
+	FrontendOrigins    []string
 	DatabaseURL        string
 	JWTSecret          string
 	AccessTokenTTL     time.Duration
@@ -30,10 +30,11 @@ type Config struct {
 }
 
 func Load() Config {
+	frontendOrigins := listEnv("FRONTEND_ORIGINS", env("FRONTEND_ORIGIN", "http://localhost:3000"))
 	return Config{
 		AppEnv:             env("APP_ENV", "development"),
 		HTTPAddr:           env("HTTP_ADDR", ":8080"),
-		FrontendOrigin:     env("FRONTEND_ORIGIN", "http://localhost:3000"),
+		FrontendOrigins:    frontendOrigins,
 		DatabaseURL:        env("DATABASE_URL", "postgres://mdm:mdm@localhost:5432/mdm_compro?sslmode=disable"),
 		JWTSecret:          env("JWT_SECRET", "change-me-in-production"),
 		AccessTokenTTL:     durationEnv("ACCESS_TOKEN_TTL", 15*time.Minute),
@@ -64,6 +65,24 @@ func env(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func listEnv(key, fallback string) []string {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		raw = fallback
+	}
+	parts := strings.Split(raw, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if value := strings.TrimSpace(part); value != "" {
+			values = append(values, value)
+		}
+	}
+	if len(values) == 0 {
+		return []string{fallback}
+	}
+	return values
 }
 
 func intEnv(key string, fallback int) int {

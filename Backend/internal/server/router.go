@@ -40,7 +40,7 @@ func NewRouter(cfg config.Config, logger *slog.Logger, pool *pgxpool.Pool) http.
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{cfg.FrontendOrigin},
+		AllowedOrigins:   cfg.FrontendOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
@@ -84,7 +84,10 @@ func NewRouter(cfg config.Config, logger *slog.Logger, pool *pgxpool.Pool) http.
 			r.Use(requireAuth(tokenManager))
 			r.Get("/dashboard", adminHandler.Dashboard)
 			r.Get("/contacts", adminHandler.Contacts)
-			for _, module := range []string{"users", "roles", "permissions", "pages", "services", "products", "news", "careers", "media", "seo-meta", "settings"} {
+			r.Get("/pages", adminHandler.Pages)
+			r.Get("/pages/{id}", adminHandler.Page)
+			r.Put("/pages/{id}", adminHandler.UpdatePage)
+			for _, module := range []string{"users", "roles", "permissions", "services", "products", "news", "careers", "media", "seo-meta", "settings"} {
 				r.Get("/"+module, adminHandler.ModuleContract)
 				r.Post("/"+module, adminHandler.ModuleContract)
 				r.Put("/"+module+"/{id}", adminHandler.ModuleContract)

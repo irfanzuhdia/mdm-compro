@@ -54,6 +54,14 @@ type Page struct {
 	Version     int             `json:"version"`
 }
 
+type PageInput struct {
+	Title       string          `json:"title"`
+	Content     json.RawMessage `json:"content"`
+	Status      string          `json:"status"`
+	PublishedAt *time.Time      `json:"publishedAt"`
+	Version     int             `json:"version"`
+}
+
 type NewsItem struct {
 	ID               string          `json:"id"`
 	Slug             string          `json:"slug"`

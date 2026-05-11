@@ -48,8 +48,10 @@ make logs
 ```
 
 ## Admin Login
-- URL: `http://localhost:3000/admin/login`
+- Docker/Nginx URL: `http://localhost:8088/admin/login`
+- Direct frontend URL: `http://localhost:3000/admin/login`
 - Email: `admin@multidayamitra.co.id`
 - Password: `admin123`
 
-The admin shell requires the Go API and PostgreSQL to be running.
+The admin shell requires the Go API and PostgreSQL to be running. Prefer the
+Nginx URL when validating the full Docker routing path.

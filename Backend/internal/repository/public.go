@@ -14,7 +14,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrNotFound = errors.New("not found")
+var (
+	ErrConflict = errors.New("conflict")
+	ErrNotFound = errors.New("not found")
+)
 
 type PublicRepository struct {
 	pool *pgxpool.Pool

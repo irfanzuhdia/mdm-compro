@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { safeAdminNext } from "@/lib/admin-auth"
 
 export const metadata: Metadata = {
   title: "CMS Login — PT Multi Daya Mitra",
@@ -10,9 +11,10 @@ export const metadata: Metadata = {
 export default async function AdminLoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; next?: string }>
 }) {
-  const { error } = await searchParams
+  const { error, next } = await searchParams
+  const nextPath = safeAdminNext(next)
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-secondary/40 px-4 py-10">
@@ -34,6 +36,7 @@ export default async function AdminLoginPage({
         )}
 
         <form action="/api/admin/login" method="post" className="mt-6 space-y-4">
+          <input type="hidden" name="next" value={nextPath} />
           <div>
             <label htmlFor="email" className="text-sm font-medium text-foreground">
               Email
