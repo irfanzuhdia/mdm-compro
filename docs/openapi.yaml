@@ -1,0 +1,661 @@
+openapi: 3.1.0
+info:
+  title: PT Multi Daya Mitra Company Profile CMS API
+  version: 1.0.0
+  summary: REST API for the public corporate website and protected CMS.
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local Docker API
+security: []
+tags:
+  - name: Public
+  - name: Auth
+  - name: Admin
+paths:
+  /public/navigation:
+    get:
+      tags: [Public]
+      summary: Get public navigation including service and product dropdown trees.
+      responses:
+        "200":
+          description: Navigation tree.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Navigation"
+  /public/pages/{key}:
+    get:
+      tags: [Public]
+      summary: Get CMS-managed static page content.
+      parameters:
+        - $ref: "#/components/parameters/PageKey"
+      responses:
+        "200":
+          description: Published page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Page"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /public/services:
+    get:
+      tags: [Public]
+      summary: List published service hierarchy.
+      responses:
+        "200":
+          description: Service tree.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContentNode"
+  /public/services/{path}:
+    get:
+      tags: [Public]
+      summary: Get one published service by full hierarchical path.
+      parameters:
+        - $ref: "#/components/parameters/ContentPath"
+      responses:
+        "200":
+          description: Service detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentNode"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /public/products:
+    get:
+      tags: [Public]
+      summary: List published product hierarchy.
+      responses:
+        "200":
+          description: Product tree.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContentNode"
+  /public/products/{path}:
+    get:
+      tags: [Public]
+      summary: Get one published product by full hierarchical path.
+      parameters:
+        - $ref: "#/components/parameters/ContentPath"
+      responses:
+        "200":
+          description: Product detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentNode"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /public/news:
+    get:
+      tags: [Public]
+      summary: List published news with pagination and optional category filter.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated news.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewsList"
+  /public/news/{slug}:
+    get:
+      tags: [Public]
+      summary: Get published news detail by slug.
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "200":
+          description: News detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/News"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /public/careers:
+    get:
+      tags: [Public]
+      summary: List published job openings.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+        - name: department
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated careers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CareerList"
+  /public/careers/{slug}:
+    get:
+      tags: [Public]
+      summary: Get published job detail by slug.
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "200":
+          description: Career detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Career"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /public/contacts:
+    post:
+      tags: [Public]
+      summary: Submit contact inquiry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactInput"
+      responses:
+        "201":
+          description: Inquiry created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate CMS user and return access/refresh tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Tokens.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate refresh token and issue a new access token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        "200":
+          description: New token pair.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke a refresh token.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        "204":
+          description: Logged out.
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      summary: CMS dashboard counts.
+      responses:
+        "200":
+          description: Dashboard metrics.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  counts:
+                    type: object
+                    additionalProperties:
+                      type: integer
+  /admin/{module}:
+    get:
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      summary: List admin module records.
+      parameters:
+        - $ref: "#/components/parameters/AdminModule"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Module list.
+        "501":
+          description: Contract reserved in current scaffold.
+    post:
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      summary: Create admin module record.
+      parameters:
+        - $ref: "#/components/parameters/AdminModule"
+      responses:
+        "201":
+          description: Created.
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /admin/{module}/{id}:
+    put:
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      summary: Update admin module record using optimistic locking.
+      parameters:
+        - $ref: "#/components/parameters/AdminModule"
+        - $ref: "#/components/parameters/UUID"
+      responses:
+        "200":
+          description: Updated.
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      summary: Soft delete admin module record.
+      parameters:
+        - $ref: "#/components/parameters/AdminModule"
+        - $ref: "#/components/parameters/UUID"
+      responses:
+        "204":
+          description: Soft deleted.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    PageKey:
+      name: key
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [about, contact]
+    Slug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+    ContentPath:
+      name: path
+      in: path
+      required: true
+      schema:
+        type: string
+        examples: ["automation", "testing-equipment"]
+    UUID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPage:
+      name: perPage
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+    AdminModule:
+      name: module
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [users, roles, permissions, pages, services, products, news, careers, media, seo-meta, contacts, settings]
+  schemas:
+    SEO:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        canonical:
+          type: string
+        noIndex:
+          type: boolean
+    MediaAsset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        altText:
+          type: string
+        mimeType:
+          type: string
+    ContentNode:
+      type: object
+      required: [id, slug, fullPath, title, status, sortOrder, depth]
+      properties:
+        id:
+          type: string
+          format: uuid
+        parentId:
+          type: [string, "null"]
+          format: uuid
+        slug:
+          type: string
+        fullPath:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        content:
+          type: object
+          additionalProperties: true
+        imageUrl:
+          type: string
+        gallery:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaAsset"
+        specs:
+          type: object
+          additionalProperties:
+            type: string
+        status:
+          type: string
+          enum: [draft, published, scheduled, archived]
+        publishedAt:
+          type: [string, "null"]
+          format: date-time
+        sortOrder:
+          type: integer
+        depth:
+          type: integer
+        seo:
+          $ref: "#/components/schemas/SEO"
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContentNode"
+    Navigation:
+      type: object
+      required: [services, products]
+      properties:
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContentNode"
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContentNode"
+    Page:
+      type: object
+      properties:
+        id:
+          type: string
+        key:
+          type: string
+        title:
+          type: string
+        content:
+          type: object
+          additionalProperties: true
+        status:
+          type: string
+        publishedAt:
+          type: [string, "null"]
+          format: date-time
+        seo:
+          $ref: "#/components/schemas/SEO"
+        version:
+          type: integer
+    News:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+        excerpt:
+          type: string
+        body:
+          type: object
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        featuredImageUrl:
+          type: string
+        featured:
+          type: boolean
+        status:
+          type: string
+        publishedAt:
+          type: [string, "null"]
+          format: date-time
+        seo:
+          $ref: "#/components/schemas/SEO"
+        version:
+          type: integer
+    Career:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        description:
+          type: object
+        department:
+          type: string
+        location:
+          type: string
+        employmentType:
+          type: string
+          enum: [full_time, contract, internship, part_time]
+        applyUrl:
+          type: string
+        deadline:
+          type: [string, "null"]
+          format: date-time
+        status:
+          type: string
+        publishedAt:
+          type: [string, "null"]
+          format: date-time
+        version:
+          type: integer
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        perPage:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+    NewsList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/News"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    CareerList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Career"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    ContactInput:
+      type: object
+      required: [name, email, subject, message]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        company:
+          type: string
+        subject:
+          type: string
+        message:
+          type: string
+    Contact:
+      allOf:
+        - $ref: "#/components/schemas/ContactInput"
+        - type: object
+          properties:
+            id:
+              type: string
+            status:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    AuthTokens:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        accessTokenExpiresAt:
+          type: string
+          format: date-time
+        refreshToken:
+          type: string
+        refreshTokenExpiresAt:
+          type: string
+          format: date-time
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            name:
+              type: string
+            permissions:
+              type: array
+              items:
+                type: string
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+  responses:
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Missing, invalid, or expired credentials.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ValidationError:
+      description: Validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Slug conflict or optimistic locking conflict.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"

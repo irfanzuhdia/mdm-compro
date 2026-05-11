@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+.next/
+dist/
+coverage/
+.env
+.env.local
+*.log
+*.tsbuildinfo
+postgres_data/
+minio_data/
+tmp/
