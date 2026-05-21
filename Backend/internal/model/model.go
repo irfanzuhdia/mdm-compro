@@ -25,22 +25,41 @@ type Navigation struct {
 }
 
 type ContentNode struct {
-	ID          string            `json:"id"`
-	ParentID    *string           `json:"parentId,omitempty"`
-	Slug        string            `json:"slug"`
-	FullPath    string            `json:"fullPath"`
-	Title       string            `json:"title"`
-	Summary     string            `json:"summary,omitempty"`
-	Content     json.RawMessage   `json:"content,omitempty"`
-	ImageURL    string            `json:"imageUrl,omitempty"`
-	Gallery     []MediaAsset      `json:"gallery,omitempty"`
-	Specs       map[string]string `json:"specs,omitempty"`
-	Status      string            `json:"status"`
-	PublishedAt *time.Time        `json:"publishedAt,omitempty"`
-	SortOrder   int               `json:"sortOrder"`
-	Depth       int               `json:"depth"`
-	SEO         SEO               `json:"seo"`
-	Children    []ContentNode     `json:"children,omitempty"`
+	ID           string            `json:"id"`
+	ParentID     *string           `json:"parentId,omitempty"`
+	Slug         string            `json:"slug"`
+	FullPath     string            `json:"fullPath"`
+	Title        string            `json:"title"`
+	Summary      string            `json:"summary,omitempty"`
+	Content      json.RawMessage   `json:"content,omitempty"`
+	ImageURL     string            `json:"imageUrl,omitempty"`
+	Gallery      []MediaAsset      `json:"gallery,omitempty"`
+	Specs        map[string]string `json:"specs,omitempty"`
+	DatasheetURL string            `json:"datasheetUrl,omitempty"`
+	Status       string            `json:"status"`
+	PublishedAt  *time.Time        `json:"publishedAt,omitempty"`
+	SortOrder    int               `json:"sortOrder"`
+	Depth        int               `json:"depth"`
+	SEO          SEO               `json:"seo"`
+	Version      int               `json:"version"`
+	Children     []ContentNode     `json:"children,omitempty"`
+}
+
+type ContentNodeInput struct {
+	ParentID     *string           `json:"parentId"`
+	Slug         string            `json:"slug"`
+	Title        string            `json:"title"`
+	Summary      string            `json:"summary"`
+	Content      json.RawMessage   `json:"content"`
+	ImageURL     string            `json:"imageUrl"`
+	Gallery      []MediaAsset      `json:"gallery"`
+	Specs        map[string]string `json:"specs"`
+	DatasheetURL string            `json:"datasheetUrl"`
+	Status       string            `json:"status"`
+	PublishedAt  *time.Time        `json:"publishedAt"`
+	SortOrder    int               `json:"sortOrder"`
+	SEO          SEO               `json:"seo"`
+	Version      int               `json:"version"`
 }
 
 type Page struct {
@@ -55,11 +74,22 @@ type Page struct {
 }
 
 type PageInput struct {
+	Key         string          `json:"key"`
 	Title       string          `json:"title"`
 	Content     json.RawMessage `json:"content"`
 	Status      string          `json:"status"`
 	PublishedAt *time.Time      `json:"publishedAt"`
+	SEO         SEO             `json:"seo"`
 	Version     int             `json:"version"`
+}
+
+type PageCreateInput struct {
+	Key         string          `json:"key"`
+	Title       string          `json:"title"`
+	Content     json.RawMessage `json:"content"`
+	Status      string          `json:"status"`
+	PublishedAt *time.Time      `json:"publishedAt"`
+	SEO         SEO             `json:"seo"`
 }
 
 type NewsItem struct {
@@ -79,6 +109,21 @@ type NewsItem struct {
 	Version          int             `json:"version"`
 }
 
+type NewsInput struct {
+	Slug             string          `json:"slug"`
+	Title            string          `json:"title"`
+	Excerpt          string          `json:"excerpt"`
+	Body             json.RawMessage `json:"body"`
+	Category         string          `json:"category"`
+	FeaturedImageURL string          `json:"featuredImageUrl"`
+	Featured         bool            `json:"featured"`
+	Status           string          `json:"status"`
+	PublishedAt      *time.Time      `json:"publishedAt"`
+	ScheduledAt      *time.Time      `json:"scheduledAt"`
+	SEO              SEO             `json:"seo"`
+	Version          int             `json:"version"`
+}
+
 type Career struct {
 	ID             string          `json:"id"`
 	Slug           string          `json:"slug"`
@@ -92,6 +137,22 @@ type Career struct {
 	Deadline       *time.Time      `json:"deadline,omitempty"`
 	Status         string          `json:"status"`
 	PublishedAt    *time.Time      `json:"publishedAt,omitempty"`
+	SEO            SEO             `json:"seo"`
+	Version        int             `json:"version"`
+}
+
+type CareerInput struct {
+	Slug           string          `json:"slug"`
+	Title          string          `json:"title"`
+	Summary        string          `json:"summary"`
+	Description    json.RawMessage `json:"description"`
+	Department     string          `json:"department"`
+	Location       string          `json:"location"`
+	EmploymentType string          `json:"employmentType"`
+	ApplyURL       string          `json:"applyUrl"`
+	Deadline       *time.Time      `json:"deadline"`
+	Status         string          `json:"status"`
+	PublishedAt    *time.Time      `json:"publishedAt"`
 	SEO            SEO             `json:"seo"`
 	Version        int             `json:"version"`
 }

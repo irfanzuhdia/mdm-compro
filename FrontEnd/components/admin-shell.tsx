@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils"
 const navItems = [
   { label: "Dashboard", href: "/admin", key: "dashboard", icon: Home },
   { label: "Pages", href: "/admin/pages", key: "pages", icon: FileText },
-  { label: "Services", href: "/admin", key: "services", icon: FileText, disabled: true },
-  { label: "Products", href: "/admin", key: "products", icon: Package, disabled: true },
-  { label: "News", href: "/admin", key: "news", icon: Newspaper, disabled: true },
+  { label: "Services", href: "/admin/services", key: "services", icon: FileText },
+  { label: "Products", href: "/admin/products", key: "products", icon: Package },
+  { label: "News", href: "/admin/news", key: "news", icon: Newspaper },
+  { label: "Careers", href: "/admin/careers", key: "careers", icon: Users },
   { label: "Contacts", href: "/admin", key: "contacts", icon: Inbox, disabled: true },
   { label: "Users", href: "/admin", key: "users", icon: Users, disabled: true },
   { label: "Settings", href: "/admin", key: "settings", icon: Settings, disabled: true },

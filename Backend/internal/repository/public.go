@@ -98,9 +98,9 @@ func (r PublicRepository) listContent(ctx context.Context, table, fullPath strin
 		       COALESCE(c.image_url, ''), c.gallery, c.status, c.published_at, c.sort_order, c.depth,
 		       COALESCE(s.title, ''), COALESCE(s.description, ''), COALESCE(s.canonical_url, ''), COALESCE(s.no_index, false)`
 	if table == "products" {
-		query += `, c.specs`
+		query += `, COALESCE(c.datasheet_url, ''), c.specs`
 	} else {
-		query += `, '{}'::jsonb`
+		query += `, ''::text, '{}'::jsonb`
 	}
 	query += ` FROM ` + table + ` c
 		LEFT JOIN seo_meta s ON s.entity_type = $1 AND s.entity_id = c.id AND s.deleted_at IS NULL
@@ -125,7 +125,7 @@ func (r PublicRepository) listContent(ctx context.Context, table, fullPath strin
 		var parentID sql.NullString
 		var content, galleryBytes, specsBytes []byte
 		var publishedAt sql.NullTime
-		if err := rows.Scan(&item.ID, &parentID, &item.Slug, &item.FullPath, &item.Title, &item.Summary, &content, &item.ImageURL, &galleryBytes, &item.Status, &publishedAt, &item.SortOrder, &item.Depth, &item.SEO.Title, &item.SEO.Description, &item.SEO.Canonical, &item.SEO.NoIndex, &specsBytes); err != nil {
+		if err := rows.Scan(&item.ID, &parentID, &item.Slug, &item.FullPath, &item.Title, &item.Summary, &content, &item.ImageURL, &galleryBytes, &item.Status, &publishedAt, &item.SortOrder, &item.Depth, &item.SEO.Title, &item.SEO.Description, &item.SEO.Canonical, &item.SEO.NoIndex, &item.DatasheetURL, &specsBytes); err != nil {
 			return nil, err
 		}
 		if parentID.Valid {

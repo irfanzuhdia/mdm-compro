@@ -1,7 +1,7 @@
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { adminLoginLocation, adminRefreshLocation } from "@/lib/admin-auth"
-import type { ListResponse, PageContent } from "@/lib/cms"
+import type { Career, ContentNode, ListResponse, NewsItem, PageContent } from "@/lib/cms"
 
 const API_BASE =
   process.env.CMS_API_BASE_URL ??
@@ -11,13 +11,79 @@ const API_BASE =
 const ADMIN_BASE = API_BASE.replace("/public", "/admin")
 
 export type AdminPagesResponse = ListResponse<PageContent>
+export type AdminContentResponse = ListResponse<ContentNode>
+export type AdminNewsResponse = ListResponse<NewsItem>
+export type AdminCareersResponse = ListResponse<Career>
 
 export type PageUpdatePayload = {
+  key: string
   title: string
   content: unknown
   status: string
   publishedAt: string | null
+  seo: {
+    title?: string
+    description?: string
+    canonical?: string
+    noIndex?: boolean
+  }
   version: number
+}
+
+export type PageCreatePayload = Omit<PageUpdatePayload, "version">
+
+export type ContentItemPayload = {
+  slug: string
+  title: string
+  summary: string
+  content: unknown
+  imageUrl: string
+  specs?: Record<string, string>
+  datasheetUrl?: string
+  status: string
+  publishedAt: string | null
+  sortOrder: number
+  seo?: {
+    title?: string
+    description?: string
+    canonical?: string
+    noIndex?: boolean
+  }
+  version?: number
+}
+
+export type NewsPayload = {
+  slug: string
+  title: string
+  excerpt: string
+  body: unknown
+  category: string
+  featuredImageUrl: string
+  featured: boolean
+  status: string
+  publishedAt: string | null
+  seo?: {
+    title?: string
+    description?: string
+    canonical?: string
+    noIndex?: boolean
+  }
+  version?: number
+}
+
+export type CareerPayload = {
+  slug: string
+  title: string
+  summary: string
+  description: unknown
+  department: string
+  location: string
+  employmentType: string
+  applyUrl: string
+  deadline: string | null
+  status: string
+  publishedAt: string | null
+  version?: number
 }
 
 export class AdminApiError extends Error {

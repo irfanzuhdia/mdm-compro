@@ -23,11 +23,13 @@ export type ContentNode = {
   imageUrl?: string
   gallery?: MediaAsset[]
   specs?: Record<string, string>
+  datasheetUrl?: string
   status: string
   publishedAt?: string
   sortOrder: number
   depth: number
   seo?: SEO
+  version?: number
   children?: ContentNode[]
 }
 
@@ -44,6 +46,7 @@ export type NewsItem = {
   status: string
   publishedAt?: string
   seo?: SEO
+  version?: number
 }
 
 export type Career = {
@@ -60,6 +63,7 @@ export type Career = {
   status: string
   publishedAt?: string
   seo?: SEO
+  version?: number
 }
 
 export type PageContent = {
