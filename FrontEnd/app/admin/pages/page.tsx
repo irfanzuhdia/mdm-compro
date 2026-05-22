@@ -117,7 +117,7 @@ export default async function AdminPagesPage({
           <TableHeader>
             <TableRow>
               <TableHead>Title</TableHead>
-              <TableHead>Key</TableHead>
+              <TableHead>Path</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Version</TableHead>
               <TableHead className="w-56 text-right">Actions</TableHead>

@@ -7,6 +7,7 @@ import (
 )
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+var pathSlugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*$`)
 
 type ValidationError struct {
 	Fields map[string]string
@@ -40,4 +41,8 @@ func Email(value string) bool {
 
 func Slug(value string) bool {
 	return slugPattern.MatchString(strings.TrimSpace(value))
+}
+
+func PathSlug(value string) bool {
+	return pathSlugPattern.MatchString(strings.Trim(strings.TrimSpace(value), "/"))
 }

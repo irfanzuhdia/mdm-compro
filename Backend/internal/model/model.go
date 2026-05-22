@@ -115,6 +115,7 @@ type NewsInput struct {
 	Excerpt          string          `json:"excerpt"`
 	Body             json.RawMessage `json:"body"`
 	Category         string          `json:"category"`
+	Tags             []string        `json:"tags"`
 	FeaturedImageURL string          `json:"featuredImageUrl"`
 	Featured         bool            `json:"featured"`
 	Status           string          `json:"status"`

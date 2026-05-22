@@ -18,6 +18,7 @@ type ContentItemFormProps = {
   action: Action
   item?: ContentNode
   mode: "create" | "edit"
+  parentOptions?: ContentNode[]
   resource: "services" | "products"
 }
 
@@ -33,8 +34,13 @@ type CareerFormProps = {
   mode: "create" | "edit"
 }
 
-export function ContentItemForm({ action, item, mode, resource }: ContentItemFormProps) {
+export function ContentItemForm({ action, item, mode, parentOptions = [], resource }: ContentItemFormProps) {
   const isProduct = resource === "products"
+  const availableParents = parentOptions.filter((option) => {
+    if (option.id === item?.id) return false
+    if (item?.fullPath && option.fullPath.startsWith(`${item.fullPath}/`)) return false
+    return option.depth < 4
+  })
 
   return (
     <form action={action} className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -52,6 +58,7 @@ export function ContentItemForm({ action, item, mode, resource }: ContentItemFor
           <Field label="Name" name="title" required defaultValue={item?.title} />
           <Field label="Slug" name="slug" required defaultValue={item?.slug} />
         </div>
+        <ParentField defaultValue={item?.parentId} options={availableParents} />
         <Field label="Short description" name="summary" defaultValue={item?.summary} />
         <TextAreaField
           label="Description"
@@ -87,6 +94,40 @@ export function ContentItemForm({ action, item, mode, resource }: ContentItemFor
   )
 }
 
+function ParentField({
+  defaultValue,
+  options,
+}: {
+  defaultValue?: string
+  options: ContentNode[]
+}) {
+  return (
+    <div>
+      <label className="text-sm font-medium text-foreground" htmlFor="parentId">
+        Parent
+      </label>
+      <select
+        className="mt-2 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        defaultValue={defaultValue ?? ""}
+        id="parentId"
+        name="parentId"
+      >
+        <option value="">No parent</option>
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {optionLabel(option)}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+function optionLabel(option: ContentNode) {
+  const prefix = option.depth > 0 ? `${"--".repeat(option.depth)} ` : ""
+  return `${prefix}${option.title} (${option.fullPath})`
+}
+
 export function NewsForm({ action, item, mode }: NewsFormProps) {
   return (
     <form action={action} className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -107,6 +148,13 @@ export function NewsForm({ action, item, mode }: NewsFormProps) {
           <Field label="Excerpt" name="excerpt" defaultValue={item?.excerpt} />
           <Field label="Category" name="category" defaultValue={item?.category} />
         </div>
+        <TextAreaField
+          label="Tags"
+          name="tagsText"
+          placeholder="Automation, Commissioning, Project"
+          rows={3}
+          defaultValue={item?.tags?.join(", ")}
+        />
         <TextAreaField label="Body" name="bodyText" rows={14} defaultValue={textFromBlocks(item?.body)} />
         <Field label="Featured image URL" name="featuredImageUrl" defaultValue={item?.featuredImageUrl} />
       </div>

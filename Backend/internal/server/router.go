@@ -68,7 +68,7 @@ func NewRouter(cfg config.Config, logger *slog.Logger, pool *pgxpool.Pool) http.
 
 		r.Route("/public", func(r chi.Router) {
 			r.Get("/navigation", publicHandler.Navigation)
-			r.Get("/pages/{key}", publicHandler.Page)
+			r.Get("/pages/{path:.*}", publicHandler.Page)
 			r.Get("/services", publicHandler.Services)
 			r.Get("/services/{path:.*}", publicHandler.Service)
 			r.Get("/products", publicHandler.Products)

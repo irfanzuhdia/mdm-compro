@@ -63,6 +63,7 @@ export function resourceMessage(query: { created?: string; saved?: string; delet
   if (query.deleted) return "Item archived."
   if (query.error === "conflict") return "This item changed elsewhere. Reload before trying again."
   if (query.error === "validation") return "Please check the required fields."
+  if (query.error === "invalid_parent") return "Parent selection would create an invalid hierarchy."
   if (query.error) return "Request failed."
   return ""
 }

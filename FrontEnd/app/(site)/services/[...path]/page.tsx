@@ -1,7 +1,7 @@
 import Image from "next/image"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { RichText } from "@/components/cms/rich-text"
+import { BlockRenderer } from "@/components/cms/block-renderer"
 import { CtaBanner } from "@/components/cta-banner"
 import { PageHero } from "@/components/page-hero"
 import { flattenContent, getService, getServices } from "@/lib/cms"
@@ -46,7 +46,7 @@ export default async function ServiceDetailPage({ params }: Props) {
             </div>
           </div>
           <div className="lg:col-span-7">
-            <RichText content={service.content} />
+            <BlockRenderer content={service.content} />
           </div>
         </div>
       </section>

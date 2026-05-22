@@ -1,16 +1,16 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { PageHero } from "@/components/page-hero"
-import { RichText } from "@/components/cms/rich-text"
+import { BlockRenderer } from "@/components/cms/block-renderer"
 import { getPage } from "@/lib/cms"
 
 type PageProps = {
-  params: Promise<{ pageKey: string }>
+  params: Promise<{ pagePath: string[] }>
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { pageKey } = await params
-  const page = await getPage(pageKey)
+  const pagePath = pagePathParam(await params)
+  const page = await getPage(pagePath)
   if (!page) return {}
 
   return {
@@ -22,8 +22,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function DynamicCmsPage({ params }: PageProps) {
-  const { pageKey } = await params
-  const page = await getPage(pageKey)
+  const pagePath = pagePathParam(await params)
+  const page = await getPage(pagePath)
   if (!page || page.status !== "published") {
     notFound()
   }
@@ -37,11 +37,11 @@ export default async function DynamicCmsPage({ params }: PageProps) {
         eyebrow="Page"
         title={page.title}
         description={description}
-        breadcrumbs={[{ label: "Home", href: "/" }, { label: page.title }]}
+        breadcrumbs={breadcrumbs(pagePath, page.title)}
       />
       <section className="mx-auto grid max-w-7xl gap-8 px-4 py-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-8">
         <article className="min-w-0">
-          <RichText content={page.content} />
+          <BlockRenderer content={page.content} />
         </article>
 
         {fields.length > 0 && (
@@ -61,6 +61,22 @@ export default async function DynamicCmsPage({ params }: PageProps) {
       </section>
     </>
   )
+}
+
+function pagePathParam(params: Awaited<PageProps["params"]>) {
+  return params.pagePath.map((segment) => segment.trim()).filter(Boolean).join("/")
+}
+
+function breadcrumbs(path: string, title: string) {
+  const segments = path.split("/").filter(Boolean)
+  const crumbs: Array<{ label: string; href?: string }> = [{ label: "Home", href: "/" }]
+  let href = ""
+  for (const segment of segments.slice(0, -1)) {
+    href += `/${segment}`
+    crumbs.push({ label: humanize(segment), href })
+  }
+  crumbs.push({ label: title })
+  return crumbs
 }
 
 function firstStringField(fields: Array<[string, unknown]>) {

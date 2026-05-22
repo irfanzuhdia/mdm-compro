@@ -4,7 +4,7 @@ import { AdminShell } from "@/components/admin-shell"
 import { ContentItemForm } from "@/components/admin/resource-forms"
 import { resourceMessage } from "@/components/admin/resource-toolbar"
 import { Button } from "@/components/ui/button"
-import { AdminApiError, adminFetch } from "@/lib/admin-api"
+import { AdminApiError, adminFetch, type AdminContentResponse } from "@/lib/admin-api"
 import type { ContentNode } from "@/lib/cms"
 import { updateContentItemAction } from "../../content-actions"
 
@@ -17,9 +17,15 @@ export default async function AdminEditProductPage({
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams])
   let item: ContentNode | null = null
+  let parentOptions: ContentNode[] = []
   let apiError = false
   try {
-    item = await adminFetch<ContentNode>(`/products/${id}`, {}, `/admin/products/${id}`)
+    const [itemResponse, listResponse] = await Promise.all([
+      adminFetch<ContentNode>(`/products/${id}`, {}, `/admin/products/${id}`),
+      adminFetch<AdminContentResponse>("/products?perPage=100", {}, `/admin/products/${id}`),
+    ])
+    item = itemResponse
+    parentOptions = listResponse.data
   } catch (error) {
     if (error instanceof AdminApiError) apiError = true
     else throw error
@@ -43,7 +49,13 @@ export default async function AdminEditProductPage({
       {apiError || !item ? (
         <Message destructive text="Product could not be loaded from the admin API." />
       ) : (
-        <ContentItemForm action={updateContentItemAction} item={item} mode="edit" resource="products" />
+        <ContentItemForm
+          action={updateContentItemAction}
+          item={item}
+          mode="edit"
+          parentOptions={parentOptions}
+          resource="products"
+        />
       )}
     </AdminShell>
   )

@@ -22,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea"
 import type { PageContent, SEO } from "@/lib/cms"
 
 const statusOptions = ["draft", "published", "scheduled", "archived"]
-const blockTypes = ["heading", "paragraph", "quote", "list"]
+const blockTypes = ["heading", "paragraph", "quote", "list", "image", "cta"]
 const fieldTypes = ["text", "list", "json"] as const
 
 type FieldType = (typeof fieldTypes)[number]
@@ -65,7 +65,7 @@ export function PageEditor({ action, mode, page }: PageEditorProps) {
   function updateTitle(value: string) {
     setTitle(value)
     if (!slugTouched) {
-      setKey(slugify(value))
+      setKey(slugifyPath(value))
     }
   }
 
@@ -145,7 +145,7 @@ export function PageEditor({ action, mode, page }: PageEditorProps) {
             </div>
             <div>
               <label className="text-sm font-medium text-foreground" htmlFor="key">
-                Slug
+                Path
               </label>
               <Input
                 className="mt-2"
@@ -153,8 +153,9 @@ export function PageEditor({ action, mode, page }: PageEditorProps) {
                 name="key"
                 onChange={(event) => {
                   setSlugTouched(true)
-                  setKey(slugify(event.target.value))
+                  setKey(slugifyPath(event.target.value))
                 }}
+                placeholder="company/about"
                 required
                 value={key}
               />
@@ -308,7 +309,7 @@ export function PageEditor({ action, mode, page }: PageEditorProps) {
                     <Textarea
                       className="mt-3 min-h-28 bg-background"
                       onChange={(event) => updateBlock(block.id, { text: event.target.value })}
-                      placeholder={block.type === "list" ? "One item per line" : "Write content"}
+                      placeholder={blockPlaceholder(block.type)}
                       value={block.text}
                     />
                   </div>
@@ -487,14 +488,11 @@ function contentToBlocks(content: Record<string, unknown>): BlockRow[] {
       return { id: `block-${index}`, type: "paragraph", text: "" }
     }
     const block = item as { type?: unknown; text?: unknown; items?: unknown }
+    const type = typeof block.type === "string" ? block.type : "paragraph"
     return {
       id: `block-${index}`,
-      type: typeof block.type === "string" ? block.type : "paragraph",
-      text: Array.isArray(block.items)
-        ? block.items.map((value) => String(value)).join("\n")
-        : typeof block.text === "string"
-          ? block.text
-          : "",
+      type,
+      text: blockToText(item as Record<string, unknown>, type),
     }
   })
 }
@@ -517,11 +515,23 @@ function buildContent(fields: FieldRow[], blocks: BlockRow[]) {
             .filter(Boolean),
         }
       }
+      if (block.type === "image") {
+        const [imageUrl = "", alt = ""] = block.text.split("\n").map((item) => item.trim())
+        return { type: "image", imageUrl, alt }
+      }
+      if (block.type === "cta") {
+        const [title = "", description = "", href = "", label = ""] = block.text
+          .split("\n")
+          .map((item) => item.trim())
+        return { type: "cta", title, description, href, label }
+      }
       return { type: block.type, text: block.text.trim() }
     })
     .filter((block) => {
       if ("items" in block) return Array.isArray(block.items) && block.items.length > 0
-      return Boolean(block.text)
+      if ("imageUrl" in block) return Boolean(block.imageUrl)
+      if ("title" in block || "href" in block) return Boolean(block.title || block.href)
+      return "text" in block && Boolean(block.text)
     })
   return content
 }
@@ -585,8 +595,55 @@ function previewBlocks(blocks: BlockRow[]) {
           </ul>
         )
       }
+      if (block.type === "image") {
+        const [imageUrl = "", alt = ""] = block.text.split("\n").map((item) => item.trim())
+        return (
+          <figure className="rounded-md border border-border p-3" key={block.id}>
+            <p className="font-medium text-foreground">{imageUrl || "Image URL"}</p>
+            {alt && <figcaption className="mt-1 text-sm">{alt}</figcaption>}
+          </figure>
+        )
+      }
+      if (block.type === "cta") {
+        const [title = "", description = "", href = "", label = ""] = block.text
+          .split("\n")
+          .map((item) => item.trim())
+        return (
+          <div className="rounded-md border border-border p-3" key={block.id}>
+            <p className="font-semibold text-foreground">{title || "CTA title"}</p>
+            {description && <p className="mt-1">{description}</p>}
+            {href && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {label || "Learn more"} {"->"} {href}
+              </p>
+            )}
+          </div>
+        )
+      }
       return <p key={block.id}>{block.text}</p>
     })
+}
+
+function blockToText(block: Record<string, unknown>, type: string) {
+  if (type === "list" && Array.isArray(block.items)) {
+    return block.items.map((value) => String(value)).join("\n")
+  }
+  if (type === "image") {
+    return [block.imageUrl, block.alt].filter((value) => typeof value === "string" && value).join("\n")
+  }
+  if (type === "cta") {
+    return [block.title, block.description, block.href, block.label]
+      .filter((value) => typeof value === "string" && value)
+      .join("\n")
+  }
+  return typeof block.text === "string" ? block.text : ""
+}
+
+function blockPlaceholder(type: string) {
+  if (type === "list") return "One item per line"
+  if (type === "image") return "Image URL\nAlt text"
+  if (type === "cta") return "Title\nDescription\n/link\nButton label"
+  return "Write content"
 }
 
 function valueType(value: unknown): FieldType {
@@ -611,6 +668,14 @@ function slugify(value: string) {
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
+}
+
+function slugifyPath(value: string) {
+  return value
+    .split("/")
+    .map((segment) => slugify(segment))
+    .filter(Boolean)
+    .join("/")
 }
 
 function slugifyField(value: string) {

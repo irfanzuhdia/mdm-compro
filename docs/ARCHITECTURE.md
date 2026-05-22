@@ -25,12 +25,13 @@
 
 ## Frontend Layers
 - `lib/cms.ts`: typed API client and fallback content.
-- `components/cms`: reusable CMS rendering primitives.
-- `app/*`: public App Router pages and slug routes.
+- `components/cms`: reusable CMS rendering primitives and component block rendering.
+- `app/*`: public App Router pages, catalog detail routes, and multi-segment CMS page paths.
 - `app/admin/*`: protected admin shell.
 
 ## Rendering Strategy
 - Public list/detail pages use Server Components and time-based revalidation.
+- CMS pages resolve slash-separated paths and render typed JSON blocks such as paragraphs, lists, images, and CTAs.
 - Contact form and mobile navigation are Client Components.
 - Admin dashboard uses `cache: "no-store"` because it is authenticated operational data.
 

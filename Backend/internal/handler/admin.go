@@ -251,6 +251,10 @@ func respondAdmin(w http.ResponseWriter, data any, err error) {
 		Error(w, http.StatusConflict, "version_conflict", "The record was changed by another request. Reload and try again.")
 		return
 	}
+	if errors.Is(err, repository.ErrInvalidParent) {
+		Error(w, http.StatusBadRequest, "invalid_parent", "Parent selection would create an invalid content hierarchy.")
+		return
+	}
 	if err != nil {
 		HandleError(w, err)
 		return

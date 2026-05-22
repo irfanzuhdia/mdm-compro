@@ -204,7 +204,9 @@ export async function deleteCareerAction(formData: FormData) {
 }
 
 function contentPayload(formData: FormData): ContentItemPayload {
+  const parentId = String(formData.get("parentId") ?? "").trim()
   return {
+    parentId: parentId || null,
     slug: slugify(String(formData.get("slug") ?? "")),
     title: String(formData.get("title") ?? ""),
     summary: String(formData.get("summary") ?? ""),
@@ -226,12 +228,20 @@ function newsPayload(formData: FormData): NewsPayload {
     excerpt: String(formData.get("excerpt") ?? ""),
     body: blocksFromText(String(formData.get("bodyText") ?? "")),
     category: String(formData.get("category") ?? ""),
+    tags: tagsFromText(String(formData.get("tagsText") ?? "")),
     featuredImageUrl: String(formData.get("featuredImageUrl") ?? ""),
     featured: formData.get("featured") === "on",
     status: String(formData.get("status") ?? "draft"),
     publishedAt: toIsoDateTime(formData.get("publishedAt")),
     seo: seoPayload(formData),
   }
+}
+
+function tagsFromText(value: string) {
+  return value
+    .split(/[,\n]/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
 }
 
 function careerPayload(formData: FormData): CareerPayload {
@@ -285,5 +295,6 @@ function toActionError(error: unknown) {
 function errorCode(error: AdminApiError) {
   if (error.code === "version_conflict") return "conflict"
   if (error.code === "validation_error") return "validation"
+  if (error.code === "invalid_parent") return "invalid_parent"
   return "save_failed"
 }

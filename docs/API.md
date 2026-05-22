@@ -31,6 +31,12 @@ Public navigation:
 curl http://localhost:8080/api/v1/public/navigation
 ```
 
+Public CMS page by path:
+
+```bash
+curl http://localhost:8080/api/v1/public/pages/company/history
+```
+
 Login:
 
 ```bash

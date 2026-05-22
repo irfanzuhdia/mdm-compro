@@ -33,6 +33,7 @@ export type PageUpdatePayload = {
 export type PageCreatePayload = Omit<PageUpdatePayload, "version">
 
 export type ContentItemPayload = {
+  parentId?: string | null
   slug: string
   title: string
   summary: string
@@ -58,6 +59,7 @@ export type NewsPayload = {
   excerpt: string
   body: unknown
   category: string
+  tags: string[]
   featuredImageUrl: string
   featured: boolean
   status: string

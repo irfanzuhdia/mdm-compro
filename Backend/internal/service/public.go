@@ -22,7 +22,7 @@ func (s PublicService) Navigation(ctx context.Context) (model.Navigation, error)
 }
 
 func (s PublicService) Page(ctx context.Context, key string) (model.Page, error) {
-	return s.repo.PageByKey(ctx, key)
+	return s.repo.PageByKey(ctx, strings.Trim(strings.TrimSpace(key), "/"))
 }
 
 func (s PublicService) Services(ctx context.Context) ([]model.ContentNode, error) {

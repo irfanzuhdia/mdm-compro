@@ -306,7 +306,8 @@ export async function getNavigation() {
 }
 
 export async function getPage(key: string) {
-  return cmsFetch<PageContent | null>(`/pages/${key}`, fallbackPages[key] ?? null)
+  const path = contentPath(key)
+  return cmsFetch<PageContent | null>(`/pages/${path}`, fallbackPages[key] ?? null)
 }
 
 export async function getServices() {
@@ -315,7 +316,7 @@ export async function getServices() {
 
 export async function getService(path: string) {
   const fallback = findByPath(fallbackServices, path)
-  return cmsFetch<ContentNode | null>(`/services/${path}`, fallback)
+  return cmsFetch<ContentNode | null>(`/services/${contentPath(path)}`, fallback)
 }
 
 export async function getProducts() {
@@ -324,7 +325,7 @@ export async function getProducts() {
 
 export async function getProduct(path: string) {
   const fallback = findByPath(fallbackProducts, path)
-  return cmsFetch<ContentNode | null>(`/products/${path}`, fallback)
+  return cmsFetch<ContentNode | null>(`/products/${contentPath(path)}`, fallback)
 }
 
 export async function getNews(page = 1) {
@@ -333,7 +334,7 @@ export async function getNews(page = 1) {
 
 export async function getNewsItem(slug: string) {
   const fallback = fallbackNews.data.find((item) => item.slug === slug) ?? null
-  return cmsFetch<NewsItem | null>(`/news/${slug}`, fallback)
+  return cmsFetch<NewsItem | null>(`/news/${encodeURIComponent(slug)}`, fallback)
 }
 
 export async function getCareers(page = 1) {
@@ -342,7 +343,15 @@ export async function getCareers(page = 1) {
 
 export async function getCareer(slug: string) {
   const fallback = fallbackCareers.data.find((item) => item.slug === slug) ?? null
-  return cmsFetch<Career | null>(`/careers/${slug}`, fallback)
+  return cmsFetch<Career | null>(`/careers/${encodeURIComponent(slug)}`, fallback)
+}
+
+function contentPath(path: string) {
+  return path
+    .split("/")
+    .map((segment) => encodeURIComponent(segment.trim()))
+    .filter(Boolean)
+    .join("/")
 }
 
 export function flattenContent(items: ContentNode[]): ContentNode[] {

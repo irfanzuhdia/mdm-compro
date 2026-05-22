@@ -26,7 +26,7 @@ func (h PublicHandler) Navigation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h PublicHandler) Page(w http.ResponseWriter, r *http.Request) {
-	data, err := h.service.Page(r.Context(), chi.URLParam(r, "key"))
+	data, err := h.service.Page(r.Context(), pathParam(r))
 	respond(w, data, err)
 }
 

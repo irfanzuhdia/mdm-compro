@@ -4,7 +4,7 @@ import { AdminShell } from "@/components/admin-shell"
 import { ContentItemForm } from "@/components/admin/resource-forms"
 import { resourceMessage } from "@/components/admin/resource-toolbar"
 import { Button } from "@/components/ui/button"
-import { AdminApiError, adminFetch } from "@/lib/admin-api"
+import { AdminApiError, adminFetch, type AdminContentResponse } from "@/lib/admin-api"
 import type { ContentNode } from "@/lib/cms"
 import { updateContentItemAction } from "../../content-actions"
 
@@ -17,9 +17,15 @@ export default async function AdminEditServicePage({
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams])
   let item: ContentNode | null = null
+  let parentOptions: ContentNode[] = []
   let apiError = false
   try {
-    item = await adminFetch<ContentNode>(`/services/${id}`, {}, `/admin/services/${id}`)
+    const [itemResponse, listResponse] = await Promise.all([
+      adminFetch<ContentNode>(`/services/${id}`, {}, `/admin/services/${id}`),
+      adminFetch<AdminContentResponse>("/services?perPage=100", {}, `/admin/services/${id}`),
+    ])
+    item = itemResponse
+    parentOptions = listResponse.data
   } catch (error) {
     if (error instanceof AdminApiError) apiError = true
     else throw error
@@ -43,7 +49,13 @@ export default async function AdminEditServicePage({
       {apiError || !item ? (
         <Message destructive text="Service could not be loaded from the admin API." />
       ) : (
-        <ContentItemForm action={updateContentItemAction} item={item} mode="edit" resource="services" />
+        <ContentItemForm
+          action={updateContentItemAction}
+          item={item}
+          mode="edit"
+          parentOptions={parentOptions}
+          resource="services"
+        />
       )}
     </AdminShell>
   )

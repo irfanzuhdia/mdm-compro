@@ -4,6 +4,8 @@ import { AdminShell } from "@/components/admin-shell"
 import { ContentItemForm } from "@/components/admin/resource-forms"
 import { resourceMessage } from "@/components/admin/resource-toolbar"
 import { Button } from "@/components/ui/button"
+import { AdminApiError, adminFetch, type AdminContentResponse } from "@/lib/admin-api"
+import type { ContentNode } from "@/lib/cms"
 import { createContentItemAction } from "../../content-actions"
 
 export default async function AdminNewServicePage({
@@ -12,6 +14,14 @@ export default async function AdminNewServicePage({
   searchParams: Promise<{ error?: string }>
 }) {
   const query = await searchParams
+  let parentOptions: ContentNode[] = []
+  let apiError = false
+  try {
+    parentOptions = (await adminFetch<AdminContentResponse>("/services?perPage=100", {}, "/admin/services/new")).data
+  } catch (error) {
+    if (error instanceof AdminApiError) apiError = true
+    else throw error
+  }
   return (
     <AdminShell
       active="services"
@@ -27,7 +37,13 @@ export default async function AdminNewServicePage({
       }
     >
       <Message text={resourceMessage(query)} />
-      <ContentItemForm action={createContentItemAction} mode="create" resource="services" />
+      {apiError && <Message text="Parent options could not be loaded. You can still create a root service." />}
+      <ContentItemForm
+        action={createContentItemAction}
+        mode="create"
+        parentOptions={parentOptions}
+        resource="services"
+      />
     </AdminShell>
   )
 }

@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	ErrConflict = errors.New("conflict")
-	ErrNotFound = errors.New("not found")
+	ErrConflict      = errors.New("conflict")
+	ErrInvalidParent = errors.New("invalid parent")
+	ErrNotFound      = errors.New("not found")
 )
 
 type PublicRepository struct {
@@ -44,6 +45,7 @@ func (r PublicRepository) Navigation(ctx context.Context) (model.Navigation, err
 }
 
 func (r PublicRepository) PageByKey(ctx context.Context, key string) (model.Page, error) {
+	key = strings.Trim(strings.TrimSpace(key), "/")
 	row := r.pool.QueryRow(ctx, `
 		SELECT p.id::text, p.page_key, p.title, p.content, p.status, p.published_at,
 		       COALESCE(s.title, ''), COALESCE(s.description, ''), COALESCE(s.canonical_url, ''), COALESCE(s.no_index, false),
@@ -145,7 +147,12 @@ func (r PublicRepository) listContent(ctx context.Context, table, fullPath strin
 func (r PublicRepository) ListNews(ctx context.Context, page, perPage int, category string) (model.ListResponse[model.NewsItem], error) {
 	page, perPage, offset := normalizePagination(page, perPage)
 	query := `
-		SELECT n.id::text, n.slug, n.title, n.excerpt, n.body, COALESCE(c.name, ''), COALESCE(n.featured_image_url, ''),
+		SELECT n.id::text, n.slug, n.title, n.excerpt, n.body, COALESCE(c.name, ''),
+		       COALESCE((SELECT array_agg(t.name ORDER BY t.name)
+		                 FROM news_tags nt
+		                 JOIN tags t ON t.id = nt.tag_id AND t.deleted_at IS NULL
+		                 WHERE nt.news_id = n.id), '{}'),
+		       COALESCE(n.featured_image_url, ''),
 		       n.featured, n.status, n.published_at, n.scheduled_at,
 		       COALESCE(s.title, ''), COALESCE(s.description, ''), COALESCE(s.canonical_url, ''), COALESCE(s.no_index, false),
 		       n.version, COUNT(*) OVER()
@@ -187,7 +194,12 @@ func (r PublicRepository) ListNews(ctx context.Context, page, perPage int, categ
 
 func (r PublicRepository) NewsBySlug(ctx context.Context, slug string) (model.NewsItem, error) {
 	row := r.pool.QueryRow(ctx, `
-		SELECT n.id::text, n.slug, n.title, n.excerpt, n.body, COALESCE(c.name, ''), COALESCE(n.featured_image_url, ''),
+		SELECT n.id::text, n.slug, n.title, n.excerpt, n.body, COALESCE(c.name, ''),
+		       COALESCE((SELECT array_agg(t.name ORDER BY t.name)
+		                 FROM news_tags nt
+		                 JOIN tags t ON t.id = nt.tag_id AND t.deleted_at IS NULL
+		                 WHERE nt.news_id = n.id), '{}'),
+		       COALESCE(n.featured_image_url, ''),
 		       n.featured, n.status, n.published_at, n.scheduled_at,
 		       COALESCE(s.title, ''), COALESCE(s.description, ''), COALESCE(s.canonical_url, ''), COALESCE(s.no_index, false),
 		       n.version, 1
@@ -297,7 +309,7 @@ func scanNews(row rowScanner) (model.NewsItem, int, error) {
 	var body []byte
 	var publishedAt, scheduledAt sql.NullTime
 	var total int
-	err := row.Scan(&item.ID, &item.Slug, &item.Title, &item.Excerpt, &body, &item.Category, &item.FeaturedImageURL, &item.Featured, &item.Status, &publishedAt, &scheduledAt, &item.SEO.Title, &item.SEO.Description, &item.SEO.Canonical, &item.SEO.NoIndex, &item.Version, &total)
+	err := row.Scan(&item.ID, &item.Slug, &item.Title, &item.Excerpt, &body, &item.Category, &item.Tags, &item.FeaturedImageURL, &item.Featured, &item.Status, &publishedAt, &scheduledAt, &item.SEO.Title, &item.SEO.Description, &item.SEO.Canonical, &item.SEO.NoIndex, &item.Version, &total)
 	if err != nil {
 		return model.NewsItem{}, 0, err
 	}

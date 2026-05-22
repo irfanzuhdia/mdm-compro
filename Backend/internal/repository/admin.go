@@ -304,7 +304,7 @@ func (r AdminRepository) CreateContent(ctx context.Context, table string, input 
 	}
 	defer tx.Rollback(ctx)
 
-	fullPath, depth, err := r.contentPath(ctx, tx, cfg.table, input.ParentID, input.Slug)
+	fullPath, depth, err := r.contentPath(ctx, tx, cfg.table, input.ParentID, input.Slug, "")
 	if err != nil {
 		return model.ContentNode{}, err
 	}
@@ -355,9 +355,20 @@ func (r AdminRepository) UpdateContent(ctx context.Context, table, id string, in
 	}
 	defer tx.Rollback(ctx)
 
-	fullPath, depth, err := r.contentPath(ctx, tx, cfg.table, input.ParentID, input.Slug)
+	oldPath, oldDepth, err := r.currentContentPath(ctx, tx, cfg.table, id)
 	if err != nil {
 		return model.ContentNode{}, err
+	}
+	fullPath, depth, err := r.contentPath(ctx, tx, cfg.table, input.ParentID, input.Slug, id)
+	if err != nil {
+		return model.ContentNode{}, err
+	}
+	depthDelta, err := r.descendantDepthDelta(ctx, tx, cfg.table, oldPath, oldDepth)
+	if err != nil {
+		return model.ContentNode{}, err
+	}
+	if depth+depthDelta > 4 {
+		return model.ContentNode{}, ErrInvalidParent
 	}
 	gallery := input.Gallery
 	if gallery == nil {
@@ -415,6 +426,11 @@ func (r AdminRepository) UpdateContent(ctx context.Context, table, id string, in
 	if err := upsertSEO(ctx, tx, cfg.entityType, item.ID, input.SEO); err != nil {
 		return model.ContentNode{}, err
 	}
+	if oldPath != item.FullPath {
+		if err := r.cascadeContentPaths(ctx, tx, cfg.table, oldPath, item.FullPath); err != nil {
+			return model.ContentNode{}, err
+		}
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return model.ContentNode{}, err
 	}
@@ -450,7 +466,12 @@ func (r AdminRepository) DeleteContent(ctx context.Context, table, id string, ve
 func (r AdminRepository) ListNews(ctx context.Context, page, perPage int, search, status string) (model.ListResponse[model.NewsItem], error) {
 	page, perPage, offset := normalizePagination(page, perPage)
 	rows, err := r.pool.Query(ctx, `
-		SELECT n.id::text, n.slug, n.title, COALESCE(n.excerpt, ''), n.body, COALESCE(c.name, ''), COALESCE(n.featured_image_url, ''),
+		SELECT n.id::text, n.slug, n.title, COALESCE(n.excerpt, ''), n.body, COALESCE(c.name, ''),
+		       COALESCE((SELECT array_agg(t.name ORDER BY t.name)
+		                 FROM news_tags nt
+		                 JOIN tags t ON t.id = nt.tag_id AND t.deleted_at IS NULL
+		                 WHERE nt.news_id = n.id), '{}'),
+		       COALESCE(n.featured_image_url, ''),
 		       n.featured, n.status, n.published_at, n.scheduled_at,
 		       COALESCE(s.title, ''), COALESCE(s.description, ''), COALESCE(s.canonical_url, ''), COALESCE(s.no_index, false),
 		       n.version, COUNT(*) OVER()
@@ -491,7 +512,12 @@ func (r AdminRepository) ListNews(ctx context.Context, page, perPage int, search
 
 func (r AdminRepository) NewsByID(ctx context.Context, id string) (model.NewsItem, error) {
 	row := r.pool.QueryRow(ctx, `
-		SELECT n.id::text, n.slug, n.title, COALESCE(n.excerpt, ''), n.body, COALESCE(c.name, ''), COALESCE(n.featured_image_url, ''),
+		SELECT n.id::text, n.slug, n.title, COALESCE(n.excerpt, ''), n.body, COALESCE(c.name, ''),
+		       COALESCE((SELECT array_agg(t.name ORDER BY t.name)
+		                 FROM news_tags nt
+		                 JOIN tags t ON t.id = nt.tag_id AND t.deleted_at IS NULL
+		                 WHERE nt.news_id = n.id), '{}'),
+		       COALESCE(n.featured_image_url, ''),
 		       n.featured, n.status, n.published_at, n.scheduled_at,
 		       COALESCE(s.title, ''), COALESCE(s.description, ''), COALESCE(s.canonical_url, ''), COALESCE(s.no_index, false),
 		       n.version, 1
@@ -532,6 +558,9 @@ func (r AdminRepository) CreateNews(ctx context.Context, input model.NewsInput) 
 	if err := upsertSEO(ctx, tx, "news", id, input.SEO); err != nil {
 		return model.NewsItem{}, err
 	}
+	if err := syncNewsTags(ctx, tx, id, input.Tags); err != nil {
+		return model.NewsItem{}, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return model.NewsItem{}, err
 	}
@@ -555,7 +584,7 @@ func (r AdminRepository) UpdateNews(ctx context.Context, id string, input model.
 		    featured_image_url = NULLIF($7, ''), featured = $8, status = $9, published_at = $10,
 		    scheduled_at = $11, updated_at = now(), version = version + 1
 		WHERE id = $1 AND version = $12 AND deleted_at IS NULL
-		RETURNING id::text, slug, title, COALESCE(excerpt, ''), body, ''::text, COALESCE(featured_image_url, ''),
+		RETURNING id::text, slug, title, COALESCE(excerpt, ''), body, ''::text, '{}'::text[], COALESCE(featured_image_url, ''),
 		          featured, status, published_at, scheduled_at, ''::text, ''::text, ''::text, false, version, 1
 	`, id, categoryID, input.Slug, input.Title, input.Excerpt, input.Body, input.FeaturedImageURL, input.Featured, input.Status, input.PublishedAt, input.ScheduledAt, input.Version)
 
@@ -577,6 +606,9 @@ func (r AdminRepository) UpdateNews(ctx context.Context, id string, input model.
 		return model.NewsItem{}, err
 	}
 	if err := upsertSEO(ctx, tx, "news", item.ID, input.SEO); err != nil {
+		return model.NewsItem{}, err
+	}
+	if err := syncNewsTags(ctx, tx, item.ID, input.Tags); err != nil {
 		return model.NewsItem{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -754,21 +786,80 @@ func (r AdminRepository) careerExists(ctx context.Context, id string) (bool, err
 	return exists, err
 }
 
-func (r AdminRepository) contentPath(ctx context.Context, tx pgx.Tx, table string, parentID *string, slug string) (string, int, error) {
+func (r AdminRepository) currentContentPath(ctx context.Context, tx pgx.Tx, table, id string) (string, int, error) {
+	var path string
+	var depth int
+	err := tx.QueryRow(ctx, `SELECT full_path, depth FROM `+table+` WHERE id = $1 AND deleted_at IS NULL`, id).Scan(&path, &depth)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", 0, ErrNotFound
+	}
+	return path, depth, err
+}
+
+func (r AdminRepository) contentPath(ctx context.Context, tx pgx.Tx, table string, parentID *string, slug string, currentID string) (string, int, error) {
 	if parentID == nil || strings.TrimSpace(*parentID) == "" {
 		return slug, 0, nil
 	}
 
+	parent := strings.TrimSpace(*parentID)
+	if currentID != "" && parent == currentID {
+		return "", 0, ErrInvalidParent
+	}
+
 	var parentPath string
 	var parentDepth int
-	err := tx.QueryRow(ctx, `SELECT full_path, depth FROM `+table+` WHERE id = $1 AND deleted_at IS NULL`, strings.TrimSpace(*parentID)).Scan(&parentPath, &parentDepth)
+	err := tx.QueryRow(ctx, `SELECT full_path, depth FROM `+table+` WHERE id = $1 AND deleted_at IS NULL`, parent).Scan(&parentPath, &parentDepth)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", 0, ErrNotFound
+		return "", 0, ErrInvalidParent
 	}
 	if err != nil {
 		return "", 0, err
 	}
+	if parentDepth >= 4 {
+		return "", 0, ErrInvalidParent
+	}
+	if currentID != "" {
+		currentPath, _, err := r.currentContentPath(ctx, tx, table, currentID)
+		if err != nil {
+			return "", 0, err
+		}
+		if parentPath == currentPath || strings.HasPrefix(parentPath, currentPath+"/") {
+			return "", 0, ErrInvalidParent
+		}
+	}
 	return strings.Trim(parentPath, "/") + "/" + slug, parentDepth + 1, nil
+}
+
+func (r AdminRepository) descendantDepthDelta(ctx context.Context, tx pgx.Tx, table, currentPath string, currentDepth int) (int, error) {
+	var maxDepth int
+	err := tx.QueryRow(ctx, `
+		SELECT COALESCE(MAX(depth), $2)
+		FROM `+table+`
+		WHERE deleted_at IS NULL AND full_path LIKE $1::text || '/%'
+	`, currentPath, currentDepth).Scan(&maxDepth)
+	if err != nil {
+		return 0, err
+	}
+	return maxDepth - currentDepth, nil
+}
+
+func (r AdminRepository) cascadeContentPaths(ctx context.Context, tx pgx.Tx, table, oldPath, newPath string) error {
+	_, err := tx.Exec(ctx, `
+		WITH descendants AS (
+			SELECT id,
+			       $2::text || substring(full_path FROM char_length($1::text) + 1) AS next_path
+			FROM `+table+`
+			WHERE deleted_at IS NULL AND full_path LIKE $1::text || '/%'
+		)
+		UPDATE `+table+` c
+		SET full_path = d.next_path,
+		    depth = array_length(regexp_split_to_array(d.next_path, '/'), 1) - 1,
+		    updated_at = now(),
+		    version = version + 1
+		FROM descendants d
+		WHERE c.id = d.id
+	`, oldPath, newPath)
+	return err
 }
 
 func (r AdminRepository) newsCategoryID(ctx context.Context, tx pgx.Tx, name string) (*string, error) {
@@ -792,6 +883,44 @@ func (r AdminRepository) newsCategoryID(ctx context.Context, tx pgx.Tx, name str
 		return nil, err
 	}
 	return &id, nil
+}
+
+func syncNewsTags(ctx context.Context, tx pgx.Tx, newsID string, tagNames []string) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM news_tags WHERE news_id = $1`, newsID); err != nil {
+		return err
+	}
+
+	seen := map[string]struct{}{}
+	for _, name := range tagNames {
+		name = strings.TrimSpace(name)
+		slug := slugifyText(name)
+		if name == "" || slug == "" {
+			continue
+		}
+		if _, ok := seen[slug]; ok {
+			continue
+		}
+		seen[slug] = struct{}{}
+
+		tagID := uuid.NewString()
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO tags (id, name, slug)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (slug) WHERE deleted_at IS NULL
+			DO UPDATE SET name = EXCLUDED.name, updated_at = now()
+			RETURNING id::text
+		`, tagID, name, slug).Scan(&tagID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO news_tags (news_id, tag_id)
+			VALUES ($1, $2)
+			ON CONFLICT DO NOTHING
+		`, newsID, tagID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func scanAdminPage(row rowScanner) (model.Page, int, error) {

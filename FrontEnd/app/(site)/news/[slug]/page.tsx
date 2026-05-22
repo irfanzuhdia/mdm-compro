@@ -2,7 +2,7 @@ import Image from "next/image"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
-import { RichText } from "@/components/cms/rich-text"
+import { BlockRenderer } from "@/components/cms/block-renderer"
 import { CtaBanner } from "@/components/cta-banner"
 import { PageHero } from "@/components/page-hero"
 import { fallbackNews, formatDate, getNewsItem } from "@/lib/cms"
@@ -40,12 +40,17 @@ export default async function NewsDetailPage({ params }: Props) {
         <div className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:px-8">
           <div className="mb-8 flex flex-wrap items-center gap-3">
             {news.category && <Badge variant="outline">{news.category}</Badge>}
+            {(news.tags ?? []).map((tag) => (
+              <Badge key={tag} variant="secondary">
+                {tag}
+              </Badge>
+            ))}
             <span className="text-sm text-muted-foreground">{formatDate(news.publishedAt)}</span>
           </div>
           <div className="relative mb-10 aspect-[16/9] overflow-hidden rounded-xl border border-border bg-secondary">
             <Image src={news.featuredImageUrl || "/placeholder.jpg"} alt={news.title} fill className="object-cover" priority />
           </div>
-          <RichText content={news.body} />
+          <BlockRenderer content={news.body} />
         </div>
       </article>
       <CtaBanner

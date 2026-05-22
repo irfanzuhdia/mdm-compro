@@ -41,14 +41,14 @@ func (s AdminService) Page(ctx context.Context, id string) (model.Page, error) {
 }
 
 func (s AdminService) CreatePage(ctx context.Context, input model.PageCreateInput) (model.Page, error) {
-	input.Key = strings.TrimSpace(input.Key)
+	input.Key = strings.Trim(strings.TrimSpace(input.Key), "/")
 	input.Title = strings.TrimSpace(input.Title)
 	input.Status = strings.TrimSpace(input.Status)
 	input.SEO = cleanSEO(input.SEO)
 
 	v := validator.New()
-	if !validator.Slug(input.Key) {
-		v = v.Add("key", "Page slug must use lowercase letters, numbers, and hyphens.")
+	if !validator.PathSlug(input.Key) {
+		v = v.Add("key", "Page path must use lowercase letters, numbers, hyphens, and optional slash-separated segments.")
 	}
 	if !validator.Required(input.Title) {
 		v = v.Add("title", "Title is required.")
@@ -70,13 +70,13 @@ func (s AdminService) CreatePage(ctx context.Context, input model.PageCreateInpu
 }
 
 func (s AdminService) UpdatePage(ctx context.Context, id string, input model.PageInput) (model.Page, error) {
-	input.Key = strings.TrimSpace(input.Key)
+	input.Key = strings.Trim(strings.TrimSpace(input.Key), "/")
 	input.Title = strings.TrimSpace(input.Title)
 	input.Status = strings.TrimSpace(input.Status)
 	input.SEO = cleanSEO(input.SEO)
 	v := validator.New()
-	if !validator.Slug(input.Key) {
-		v = v.Add("key", "Page slug must use lowercase letters, numbers, and hyphens.")
+	if !validator.PathSlug(input.Key) {
+		v = v.Add("key", "Page path must use lowercase letters, numbers, hyphens, and optional slash-separated segments.")
 	}
 	if !validator.Required(input.Title) {
 		v = v.Add("title", "Title is required.")
@@ -297,6 +297,7 @@ func normalizeNewsInput(input model.NewsInput) model.NewsInput {
 	input.Title = strings.TrimSpace(input.Title)
 	input.Excerpt = strings.TrimSpace(input.Excerpt)
 	input.Category = strings.TrimSpace(input.Category)
+	input.Tags = cleanStringList(input.Tags)
 	input.FeaturedImageURL = strings.TrimSpace(input.FeaturedImageURL)
 	input.Status = strings.TrimSpace(input.Status)
 	input.SEO = cleanSEO(input.SEO)
@@ -308,6 +309,24 @@ func normalizeNewsInput(input model.NewsInput) model.NewsInput {
 		input.ScheduledAt = nil
 	}
 	return input
+}
+
+func cleanStringList(values []string) []string {
+	seen := map[string]struct{}{}
+	cleaned := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		key := strings.ToLower(value)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		cleaned = append(cleaned, value)
+	}
+	return cleaned
 }
 
 func validateNewsInput(input model.NewsInput, requireVersion bool) validator.ValidationError {

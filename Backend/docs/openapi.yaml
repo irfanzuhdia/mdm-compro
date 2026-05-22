@@ -23,12 +23,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Navigation"
-  /public/pages/{key}:
+  /public/pages/{path}:
     get:
       tags: [Public]
-      summary: Get CMS-managed static page content.
+      summary: Get CMS-managed page content by slash-separated path.
       parameters:
-        - $ref: "#/components/parameters/PageKey"
+        - $ref: "#/components/parameters/PagePath"
       responses:
         "200":
           description: Published page.
@@ -311,13 +311,13 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
-    PageKey:
-      name: key
+    PagePath:
+      name: path
       in: path
       required: true
       schema:
         type: string
-        enum: [about, contact]
+        pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*$"
     Slug:
       name: slug
       in: path

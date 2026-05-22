@@ -1,7 +1,7 @@
 import Image from "next/image"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { RichText } from "@/components/cms/rich-text"
+import { BlockRenderer } from "@/components/cms/block-renderer"
 import { CtaBanner } from "@/components/cta-banner"
 import { PageHero } from "@/components/page-hero"
 import { flattenContent, getProduct, getProducts } from "@/lib/cms"
@@ -57,7 +57,7 @@ export default async function ProductDetailPage({ params }: Props) {
             )}
           </div>
           <div className="lg:col-span-7">
-            <RichText content={product.content} />
+            <BlockRenderer content={product.content} />
           </div>
         </div>
       </section>
